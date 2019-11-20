@@ -1,0 +1,107 @@
+---
+title: "US Breweries Overview"
+author: "Niki Hashemi"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: 
+  html_document:
+    number_sections: true
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+    theme: yeti
+---
+
+```{r setup, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  tidyverse,
+  janitor,
+  pander,
+  usmap,
+  knitr
+)
+```
+
+# Introduction
+
+The purpose of this markdown is to provide an in-depth overview of the US Breweries dataset from [Kaggle](https://www.kaggle.com/brkurzawa/us-breweries). 
+
+Details about how the dataset was acquired and an overview of the datapoints are outlined by Brett Kurzawa in Kaggle. 
+
+```{r load_dataset}
+# Load Data
+data <- readr::read_csv(
+  file = "data/breweries_us.csv"
+) %>%
+  janitor::clean_names()
+
+# Clean Data
+data_lite <- data %>%
+  dplyr::select(
+    brewery_name,
+    state
+  ) %>%
+  dplyr::distinct() %>%
+  dplyr::group_by(state) %>%
+  dplyr::mutate(count = dplyr::n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(
+    state,
+    count
+  ) %>%
+  dplyr::mutate(state = stringr::str_replace_all(state, "-", " ")) %>%
+  dplyr::distinct() %>%
+  dplyr::arrange(state)
+```
+
+# Overview {.tabset}
+
+## Map
+
+The map shows the number of unique breweries per state.
+
+```{r}
+usmap::plot_usmap(data = data_lite, values = "count") + 
+  ggplot2::scale_fill_continuous(
+    low = "white",
+    high = "purple",
+    name = "Number of Breweries per State",
+    label = scales::comma
+  ) + 
+  ggplot2::theme(legend.position = "right")
+```
+
+## Top 10 States
+
+The table shows the 10 states with the most number of unique breweries.
+
+```{r}
+data_lite %>%
+  dplyr::arrange(desc(count)) %>%
+  dplyr::top_n(10) %>%
+  dplyr::rename(
+    "State" = state,
+    "Number of Breweries" = count
+  ) %>%
+  pander::pander()
+```
+## Bottom 10 states
+
+The table shows the 10 states with the least number of unique breweries
+
+```{r}
+data_lite %>%
+  dplyr::arrange(count) %>%
+  dplyr::top_n(-10) %>%
+  dplyr::rename(
+    "State" = state,
+    "Number of Breweries" = count
+  ) %>%
+  pander::pander()
+```
